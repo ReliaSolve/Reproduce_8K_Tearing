@@ -483,12 +483,12 @@ int main(int argc, char* argv[])
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     // Construct the view transformation matrix.  To reproduce the tearing, we rotate around the Y
-    // axis byt around 90 degrees and then we rotate around the X axis periodically by around +/- 45 degrees.
+    // axis byt around 90 degrees and then we rotate around the X axis periodically by around +/- 10 degrees from 5.
     std::array<float, 16> xrot, yrot, view;
     createRotationMatrixY(degreesToRadians(90.0f), yrot.data());
     std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     std::chrono::duration<double> elapsed = now - start;
-    float angle = 45.0f * sin(0.2 * Pi * elapsed.count());
+    float angle = 5 + 10.0f * sin(0.5 * Pi * elapsed.count());
     createRotationMatrixX(degreesToRadians(angle), xrot.data());
     multiplyMatrices({yrot.data(), xrot.data()}, view.data());
 
