@@ -311,7 +311,7 @@ void createProjectionMatrix(float fieldOfView, float aspectRatio, float nearPlan
 int main(int argc, char* argv[])
 {
   // Value of -1 does not use full screen. Setting to 0 or higher selects the display to use.
-  int fullScreenDisplay = 1;
+  int fullScreenDisplay = -1;
   int width = 7680;
   int height = 4320;
   double fps = 60.0;
@@ -326,6 +326,14 @@ int main(int argc, char* argv[])
       height = std::stoi(argv[++i]);
     } else if (arg == "--fps" && i + 1 < argc) {
       fps = std::stod(argv[++i]);
+    } else {
+      std::cerr << "Unknown argument: " << arg << std::endl;
+      std::cerr << "Usage: " << argv[0] << " [--fullScreenDisplay <index>] [--width <width>] [--height <height>] [--fps <fps>]" << std::endl;
+      std::cerr << "  --fullScreenDisplay <index>  Index of the full screen display to use (default -1 disables)" << std::endl;
+      std::cerr << "  --width <width>              Width of the window (default 7680)" << std::endl;
+      std::cerr << "  --height <height>            Height of the window (default 4320)" << std::endl;
+      std::cerr << "  --fps <fps>                  Frames per second (default 60.0)" << std::endl;
+      return 1;
     }
   }
 
@@ -349,7 +357,7 @@ int main(int argc, char* argv[])
   // Verify that the window was created.
   if (!m_window) {
     std::cerr << "Failed to create GLFW window" << std::endl;
-    return 1;
+    return 2;
   }
 
   // Determine the full-screen monitor to use, if any.
@@ -359,11 +367,11 @@ int main(int argc, char* argv[])
     GLFWmonitor** monitors = glfwGetMonitors(&count);
     if ((count == 0) || !monitors) {
       std::cerr << "No monitors for fullscreen" << std::endl;
-      return 2;
+      return 3;
     }
     if (fullScreenDisplay >= count) {
       std::cerr << "Invalid monitor requested (index larger than available monitors)" << std::endl;
-      return 3;
+      return 4;
     }
     fullScreenMonitor = monitors[fullScreenDisplay];
   }
@@ -380,7 +388,7 @@ int main(int argc, char* argv[])
   glewExperimental = true;
   if (glewInit() != GLEW_OK) {
     std::cerr << "Failed to initialize GLEW" << std::endl;
-    return 4;
+    return 5;
   }
   // Clear any OpenGL error that Glew caused.  On Non-Windows platforms, this can cause a spurious error 1280.
   glGetError();
