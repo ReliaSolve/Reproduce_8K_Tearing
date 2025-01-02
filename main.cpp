@@ -61,219 +61,68 @@ void checkProgramError(GLuint programId, const std::string& exceptionMsg) {
 //================================================================================================
 // Class to generate and draw colored geometry with internal patches.
 
-class MeshCube {
+class MeshPlane {
 public:
-  MeshCube(GLfloat scale, size_t numTriangles = 6 * 2 * 15 * 15) {
+  MeshPlane(GLfloat scale, size_t numTriangles = 2 * 15 * 15, std::array<float,3> color = {1, 1, 1}) {
     // Figure out how many quads we have per edge.  There
     // is a minimum of 1.
     size_t numQuads = numTriangles / 2;
-    size_t numQuadsPerFace = numQuads / 6;
-    size_t numQuadsPerEdge = static_cast<size_t> (sqrt(numQuadsPerFace));
+    size_t numQuadsPerEdge = static_cast<size_t> (sqrt(numQuads));
     if (numQuadsPerEdge < 1) { numQuadsPerEdge = 1; }
 
-    // Construct a white square with the specified number of
-    // quads as the +Z face of the cube.  We'll copy this and
-    // then multiply by the correct face color, and we'll
-    // adjust the coordinates by rotation to match each face.
-    std::vector<GLfloat> whiteBufferData;
-    std::vector<GLfloat> faceBufferData;
+    // Construct a square with the specified number of
+    // quads a plane in Z.
     for (size_t i = 0; i < numQuadsPerEdge; i++) {
       for (size_t j = 0; j < numQuadsPerEdge; j++) {
 
-        // Modulate the color of each quad by a random luminance,
-        // leaving all vertices the same color.
-        GLfloat color = 0.5f + rand() * 0.5f / RAND_MAX;
+        // Modulate the brightness of each quad by a random luminance,
+        // leaving all vertices the same hue.
+        GLfloat brightness = 0.5f + rand() * 0.5f / RAND_MAX;
         const size_t numTris = 2;
         const size_t numColors = 3;
         const size_t numVerts = 3;
-        for (size_t c = 0; c < numColors * numTris * numVerts; c++) {
-          whiteBufferData.push_back(color);
+        for (size_t c = 0; c < numTris * numVerts; c++) {
+          for (size_t i = 0; i < numColors; i++) {
+            colorBufferData.push_back(brightness * color[i]);
+          }
         }
 
         // Send the two triangles that make up this quad, where the
         // quad covers the appropriate fraction of the face from
         // -scale to scale in X and Y.
-        GLfloat Z = scale;
+        GLfloat Z = 0.0f;
         GLfloat minX = -scale + i * (2 * scale) / numQuadsPerEdge;
         GLfloat maxX = -scale + (i + 1) * (2 * scale) / numQuadsPerEdge;
         GLfloat minY = -scale + j * (2 * scale) / numQuadsPerEdge;
         GLfloat maxY = -scale + (j + 1) * (2 * scale) / numQuadsPerEdge;
-        faceBufferData.push_back(minX);
-        faceBufferData.push_back(maxY);
-        faceBufferData.push_back(Z);
+        vertexBufferData.push_back(minX);
+        vertexBufferData.push_back(maxY);
+        vertexBufferData.push_back(Z);
 
-        faceBufferData.push_back(minX);
-        faceBufferData.push_back(minY);
-        faceBufferData.push_back(Z);
+        vertexBufferData.push_back(minX);
+        vertexBufferData.push_back(minY);
+        vertexBufferData.push_back(Z);
 
-        faceBufferData.push_back(maxX);
-        faceBufferData.push_back(minY);
-        faceBufferData.push_back(Z);
+        vertexBufferData.push_back(maxX);
+        vertexBufferData.push_back(minY);
+        vertexBufferData.push_back(Z);
 
-        faceBufferData.push_back(maxX);
-        faceBufferData.push_back(maxY);
-        faceBufferData.push_back(Z);
+        vertexBufferData.push_back(maxX);
+        vertexBufferData.push_back(maxY);
+        vertexBufferData.push_back(Z);
 
-        faceBufferData.push_back(minX);
-        faceBufferData.push_back(maxY);
-        faceBufferData.push_back(Z);
+        vertexBufferData.push_back(minX);
+        vertexBufferData.push_back(maxY);
+        vertexBufferData.push_back(Z);
 
-        faceBufferData.push_back(maxX);
-        faceBufferData.push_back(minY);
-        faceBufferData.push_back(Z);
+        vertexBufferData.push_back(maxX);
+        vertexBufferData.push_back(minY);
+        vertexBufferData.push_back(Z);
       }
-    }
-
-    // Make a copy of the vertices for each face, then modulate
-    // the color by the face color and rotate the coordinates to
-    // put them on the correct cube face.
-
-    // +Z is blue and is in the same location as the original
-    // faces.
-    {
-      std::array<GLfloat, 3> modColor = { 0.0, 0.0, 1.0 };
-      std::vector<GLfloat> myBufferData =
-        colorModulate(whiteBufferData, modColor);
-
-      // X = X, Y = Y, Z = Z
-      std::array<GLfloat, 3> scales = { 1.0f, 1.0f, 1.0f };
-      std::array<size_t, 3> indices = { 0, 1, 2 };
-      std::vector<GLfloat> myFaceBufferData =
-        vertexRotate(faceBufferData, indices, scales);
-
-      // Catenate the colors onto the end of the
-      // color buffer.
-      colorBufferData.insert(colorBufferData.end(),
-        myBufferData.begin(), myBufferData.end());
-
-      // Catenate the vertices onto the end of the
-      // vertex buffer.
-      vertexBufferData.insert(vertexBufferData.end(),
-        myFaceBufferData.begin(), myFaceBufferData.end());
-    }
-
-    // -Z is cyan and is in the opposite size from the
-    // original face (mirror all 3).
-    {
-      std::array<GLfloat, 3> modColor = { 0.0, 1.0, 1.0 };
-      std::vector<GLfloat> myBufferData =
-        colorModulate(whiteBufferData, modColor);
-
-      // X = -X, Y = -Y, Z = -Z
-      std::array<GLfloat, 3> scales = { -1.0f, -1.0f, -1.0f };
-      std::array<size_t, 3> indices = { 0, 1, 2 };
-      std::vector<GLfloat> myFaceBufferData =
-        vertexRotate(faceBufferData, indices, scales);
-
-      // Catenate the colors onto the end of the
-      // color buffer.
-      colorBufferData.insert(colorBufferData.end(),
-        myBufferData.begin(), myBufferData.end());
-
-      // Catenate the vertices onto the end of the
-      // vertex buffer.
-      vertexBufferData.insert(vertexBufferData.end(),
-        myFaceBufferData.begin(), myFaceBufferData.end());
-    }
-
-    // +X is red and is rotated -90 degrees from the original
-    // around Y.
-    {
-      std::array<GLfloat, 3> modColor = { 1.0, 0.0, 0.0 };
-      std::vector<GLfloat> myBufferData =
-        colorModulate(whiteBufferData, modColor);
-
-      // X = Z, Y = Y, Z = -X
-      std::array<GLfloat, 3> scales = { 1.0f, 1.0f, -1.0f };
-      std::array<size_t, 3> indices = { 2, 1, 0 };
-      std::vector<GLfloat> myFaceBufferData =
-        vertexRotate(faceBufferData, indices, scales);
-
-      // Catenate the colors onto the end of the
-      // color buffer.
-      colorBufferData.insert(colorBufferData.end(),
-        myBufferData.begin(), myBufferData.end());
-
-      // Catenate the vertices onto the end of the
-      // vertex buffer.
-      vertexBufferData.insert(vertexBufferData.end(),
-        myFaceBufferData.begin(), myFaceBufferData.end());
-    }
-
-    // -X is magenta and is rotated 90 degrees from the original
-    // around Y.
-    {
-      std::array<GLfloat, 3> modColor = { 1.0, 0.0, 1.0 };
-      std::vector<GLfloat> myBufferData =
-        colorModulate(whiteBufferData, modColor);
-
-      // X = -Z, Y = Y, Z = X
-      std::array<GLfloat, 3> scales = { -1.0f, 1.0f, 1.0f };
-      std::array<size_t, 3> indices = { 2, 1, 0 };
-      std::vector<GLfloat> myFaceBufferData =
-        vertexRotate(faceBufferData, indices, scales);
-
-      // Catenate the colors onto the end of the
-      // color buffer.
-      colorBufferData.insert(colorBufferData.end(),
-        myBufferData.begin(), myBufferData.end());
-
-      // Catenate the vertices onto the end of the
-      // vertex buffer.
-      vertexBufferData.insert(vertexBufferData.end(),
-        myFaceBufferData.begin(), myFaceBufferData.end());
-    }
-
-    // +Y is green and is rotated -90 degrees from the original
-    // around X.
-    {
-      std::array<GLfloat, 3> modColor = { 0.0, 1.0, 0.0 };
-      std::vector<GLfloat> myBufferData =
-        colorModulate(whiteBufferData, modColor);
-
-      // X = X, Y = Z, Z = -Y
-      std::array<GLfloat, 3> scales = { 1.0f, 1.0f, -1.0f };
-      std::array<size_t, 3> indices = { 0, 2, 1 };
-      std::vector<GLfloat> myFaceBufferData =
-        vertexRotate(faceBufferData, indices, scales);
-
-      // Catenate the colors onto the end of the
-      // color buffer.
-      colorBufferData.insert(colorBufferData.end(),
-        myBufferData.begin(), myBufferData.end());
-
-      // Catenate the vertices onto the end of the
-      // vertex buffer.
-      vertexBufferData.insert(vertexBufferData.end(),
-        myFaceBufferData.begin(), myFaceBufferData.end());
-    }
-
-    // -Y is yellow and is rotated 90 degrees from the original
-    // around X.
-    {
-      std::array<GLfloat, 3> modColor = { 1.0, 1.0, 0.0 };
-      std::vector<GLfloat> myBufferData =
-        colorModulate(whiteBufferData, modColor);
-
-      // X = X, Y = -Z, Z = Y
-      std::array<GLfloat, 3> scales = { 1.0f, -1.0f, 1.0f };
-      std::array<size_t, 3> indices = { 0, 2, 1 };
-      std::vector<GLfloat> myFaceBufferData =
-        vertexRotate(faceBufferData, indices, scales);
-
-      // Catenate the colors onto the end of the
-      // color buffer.
-      colorBufferData.insert(colorBufferData.end(),
-        myBufferData.begin(), myBufferData.end());
-
-      // Catenate the vertices onto the end of the
-      // vertex buffer.
-      vertexBufferData.insert(vertexBufferData.end(),
-        myFaceBufferData.begin(), myFaceBufferData.end());
     }
   }
 
-  ~MeshCube() {
+  ~MeshPlane() {
     if (initialized) {
       glDeleteBuffers(1, &vertexBuffer);
       glDeleteBuffers(1, &colorBuffer);
@@ -331,55 +180,13 @@ public:
   }
 
 private:
-  MeshCube(const MeshCube&) = delete;
-  MeshCube& operator=(const MeshCube&) = delete;
+  MeshPlane(const MeshPlane&) = delete;
+  MeshPlane& operator=(const MeshPlane&) = delete;
   bool initialized = false;
   GLuint colorBuffer = 0;
   GLuint vertexBuffer = 0;
   std::vector<GLfloat> colorBufferData;
   std::vector<GLfloat> vertexBufferData;
-
-  // Multiply each triple of colors by the specified color.
-  std::vector<GLfloat> colorModulate(std::vector<GLfloat> const& inVec,
-    std::array<GLfloat, 3> const& clr) {
-    std::vector<GLfloat> out;
-    size_t elements = inVec.size() / 3;
-    if (elements * 3 != inVec.size()) {
-      // We don't have an even multiple of 3 elements, so bail.
-      return out;
-    }
-    out = inVec;
-    for (size_t i = 0; i < elements; i++) {
-      for (size_t c = 0; c < 3; c++) {
-        out[3 * i + c] *= clr[c];
-      }
-    }
-    return out;
-  }
-
-  // Swizzle each triple of coordinates by the specified
-  // index and then multiply by the specified scale.  This
-  // lets us implement a poor-man's rotation matrix, where
-  // we pick which element (0-2) and which polarity (-1 or
-  // 1) to use.
-  std::vector<GLfloat> vertexRotate(
-    std::vector<GLfloat> const& inVec,
-    std::array<size_t, 3> const& indices,
-    std::array<GLfloat, 3> const& scales) {
-    std::vector<GLfloat> out;
-    size_t elements = inVec.size() / 3;
-    if (elements * 3 != inVec.size()) {
-      // We don't have an even multiple of 3 elements, so bail.
-      return out;
-    }
-    out.resize(inVec.size());
-    for (size_t i = 0; i < elements; i++) {
-      for (size_t p = 0; p < 3; p++) {
-        out[3 * i + p] = inVec[3 * i + indices[p]] * scales[p];
-      }
-    }
-    return out;
-  }
 };
 
 int main(int argc, char* argv[])
@@ -493,14 +300,30 @@ int main(int argc, char* argv[])
   glDisable(GL_CULL_FACE);
 
   //================================================================================================
-  // Make our geometry object, which will draw itself.
-  /// @todo Replace this with a plane whose color we set.
+  // Make our geometry objects, which will know how to draw themselves.  There will be 21 of them with
+  // colors chosen from a set of 6.
   float radius = 0.25f;
   size_t quadsPerEdge = 10;
   size_t trianglesPerSide = 2 * quadsPerEdge * quadsPerEdge;
   // 6 faces
   size_t numTriangles = static_cast<size_t>(trianglesPerSide * 6);
-  std::shared_ptr<MeshCube> roomCube = std::shared_ptr<MeshCube>(new MeshCube(radius, numTriangles));
+  std::vector< std::array<float, 3> > colors = {
+    {1.0f, 0.5f, 0.5f},
+    {0.5f, 1.0f, 0.5f},
+    {0.5f, 0.5f, 1.0f},
+    {1.0f, 1.0f, 0.5f},
+    {0.5f, 1.0f, 1.0f},
+    {1.0f, 0.5f, 1.0f}
+  };
+  std::vector< std::shared_ptr<MeshPlane> > planes;
+  unsigned NX = 7;
+  unsigned NY = 3;
+  for (unsigned i = 0; i < NX; i++) {
+    for (unsigned j = 0; j < NY; j++) {
+      planes.push_back(std::shared_ptr<MeshPlane>(
+        new MeshPlane(radius, numTriangles, colors[(i + j) % colors.size()])));
+    }
+  }
 
   //================================================================================================
   // Timing the main loop.
@@ -524,7 +347,9 @@ int main(int argc, char* argv[])
       0.0f, 0.0f, 0.0f, 1.0f
     };
     glUniformMatrix4fv(modelViewProjectionUniformId, 1, GL_FALSE, viewProjection);
-    roomCube->draw();
+    for (auto& plane : planes) {
+      plane->draw();
+    }
 
     // Swap front and back buffers and wait for it to complete.
     glfwSwapBuffers(m_window);
@@ -548,6 +373,7 @@ int main(int argc, char* argv[])
   //================================================================================================
   // Done with everything, free our context and quit GLFW.
 
+  planes.clear();
   glfwMakeContextCurrent(nullptr);
   glfwDestroyWindow(m_window);
   glfwTerminate();
